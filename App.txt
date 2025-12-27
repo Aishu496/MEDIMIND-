@@ -1,0 +1,452 @@
+import { useState, useEffect } from "react";
+import { Login } from "./components/Login";
+import { Signup } from "./components/Signup";
+import { Profile } from "./components/Profile";
+import { MedicineCard } from "./components/MedicineCard";
+import { AddMedicineDialog } from "./components/AddMedicineDialog";
+import { AlarmNotification } from "./components/AlarmNotification";
+import { MedicineHistory } from "./components/MedicineHistory";
+import { PillBottle, Calendar, Brain, History, User, LogOut } from "lucide-react";
+
+interface Medicine {
+  id: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  times: string[];
+  notes: string;
+  takenToday: string[];
+}
+
+interface AlarmData {
+  medicineId: string;
+  medicineName: string;
+  dosage: string;
+  time: string;
+}
+
+interface HistoryRecord {
+  date: string;
+  medicineName: string;
+  dosage: string;
+  scheduledTime: string;
+  takenTime?: string;
+  status: "taken" | "missed" | "skipped";
+}
+
+interface UserProfile {
+  name: string;
+  email: string;
+  age: string;
+  phone: string;
+}
+
+export default function App() {
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authView, setAuthView] = useState<"login" | "signup">("login");
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
+
+  const [medicines, setMedicines] = useState<Medicine[]>([
+    {
+      id: "1",
+      name: "Vitamin D",
+      dosage: "1000 IU",
+      frequency: "daily",
+      times: ["09:00"],
+      notes: "Take with breakfast",
+      takenToday: [],
+    },
+    {
+      id: "2",
+      name: "Omega-3",
+      dosage: "500mg",
+      frequency: "twice-daily",
+      times: ["08:00", "20:00"],
+      notes: "Take with food",
+      takenToday: [],
+    },
+  ]);
+
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeAlarm, setActiveAlarm] = useState<AlarmData | null>(null);
+  const [snoozedAlarms, setSnoozedAlarms] = useState<Set<string>>(new Set());
+  const [medicineHistory, setMedicineHistory] = useState<HistoryRecord[]>([
+    {
+      date: "2024-12-25",
+      medicineName: "Vitamin D",
+      dosage: "1000 IU",
+      scheduledTime: "09:00",
+      takenTime: "09:15",
+      status: "taken",
+    },
+    {
+      date: "2024-12-25",
+      medicineName: "Omega-3",
+      dosage: "500mg",
+      scheduledTime: "08:00",
+      takenTime: "08:10",
+      status: "taken",
+    },
+    {
+      date: "2024-12-25",
+      medicineName: "Omega-3",
+      dosage: "500mg",
+      scheduledTime: "20:00",
+      status: "missed",
+    },
+    {
+      date: "2024-12-24",
+      medicineName: "Vitamin D",
+      dosage: "1000 IU",
+      scheduledTime: "09:00",
+      takenTime: "09:05",
+      status: "taken",
+    },
+    {
+      date: "2024-12-24",
+      medicineName: "Omega-3",
+      dosage: "500mg",
+      scheduledTime: "08:00",
+      takenTime: "08:20",
+      status: "taken",
+    },
+    {
+      date: "2024-12-24",
+      medicineName: "Omega-3",
+      dosage: "500mg",
+      scheduledTime: "20:00",
+      takenTime: "20:05",
+      status: "taken",
+    },
+  ]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentDate(now);
+      if (isAuthenticated) {
+        checkForAlarms(now);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [medicines, snoozedAlarms, isAuthenticated]);
+
+  const checkForAlarms = (now: Date) => {
+    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    
+    for (const medicine of medicines) {
+      for (const time of medicine.times) {
+        const alarmKey = `${medicine.id}-${time}`;
+        
+        if (
+          time === currentTime &&
+          !medicine.takenToday.includes(time) &&
+          !snoozedAlarms.has(alarmKey) &&
+          !activeAlarm
+        ) {
+          setActiveAlarm({
+            medicineId: medicine.id,
+            medicineName: medicine.name,
+            dosage: medicine.dosage,
+            time: time,
+          });
+          break;
+        }
+      }
+      if (activeAlarm) break;
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+  };
+
+  const handleLogin = (email: string, password: string) => {
+    // Simulated login - in production, this would validate against a backend
+    setCurrentUser({
+      name: "John Doe",
+      email: email,
+      age: "32",
+      phone: "+1 234 567 8900",
+    });
+    setIsAuthenticated(true);
+  };
+
+  const handleSignup = (userData: UserProfile) => {
+    // Simulated signup - in production, this would create user in backend
+    setCurrentUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setShowProfile(false);
+    setMedicines([]);
+    setMedicineHistory([]);
+  };
+
+  const handleUpdateProfile = (updatedUser: UserProfile) => {
+    setCurrentUser(updatedUser);
+  };
+
+  const handleAddMedicine = (newMedicine: Omit<Medicine, "id" | "takenToday">) => {
+    const medicine: Medicine = {
+      ...newMedicine,
+      id: Date.now().toString(),
+      takenToday: [],
+    };
+    setMedicines([...medicines, medicine]);
+  };
+
+  const handleMarkTaken = (id: string, time: string) => {
+    setMedicines(
+      medicines.map((med) =>
+        med.id === id
+          ? { ...med, takenToday: [...med.takenToday, time] }
+          : med
+      )
+    );
+    setMedicineHistory((prev) => [
+      ...prev,
+      {
+        date: currentDate.toISOString().split("T")[0],
+        medicineName: medicines.find((m) => m.id === id)?.name || "",
+        dosage: medicines.find((m) => m.id === id)?.dosage || "",
+        scheduledTime: time,
+        takenTime: currentDate.toISOString().split("T")[1].split(".")[0],
+        status: "taken",
+      },
+    ]);
+  };
+
+  const handleMarkMissed = (id: string, time: string) => {
+    setMedicines(
+      medicines.map((med) =>
+        med.id === id
+          ? { ...med, takenToday: med.takenToday.filter((t) => t !== time) }
+          : med
+      )
+    );
+  };
+
+  const handleDelete = (id: string) => {
+    setMedicines(medicines.filter((med) => med.id !== id));
+  };
+
+  const getTodayStats = () => {
+    const totalDoses = medicines.reduce((sum, med) => sum + med.times.length, 0);
+    const takenDoses = medicines.reduce(
+      (sum, med) => sum + med.takenToday.length,
+      0
+    );
+    return { totalDoses, takenDoses };
+  };
+
+  // Show login/signup if not authenticated
+  if (!isAuthenticated) {
+    if (authView === "login") {
+      return (
+        <Login
+          onLogin={handleLogin}
+          onSwitchToSignup={() => setAuthView("signup")}
+        />
+      );
+    } else {
+      return (
+        <Signup
+          onSignup={handleSignup}
+          onSwitchToLogin={() => setAuthView("login")}
+        />
+      );
+    }
+  }
+
+  const stats = getTodayStats();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl shadow-lg">
+                <Brain className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  MediMind
+                </h1>
+                <p className="text-sm text-gray-600">
+                  Your Smart Medicine Companion
+                </p>
+              </div>
+            </div>
+
+            {/* User Menu */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowProfile(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors shadow-sm"
+              >
+                <User className="w-5 h-5 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">
+                  {currentUser?.name.split(" ")[0]}
+                </span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors text-red-700"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 text-gray-600 mb-6">
+            <Calendar className="w-4 h-4" />
+            <span className="text-sm">{formatDate(currentDate)}</span>
+          </div>
+
+          {/* View History Button */}
+          <button
+            onClick={() => setShowHistory(true)}
+            className="mb-6 w-full flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors shadow-sm"
+          >
+            <History className="w-5 h-5 text-blue-600" />
+            <span className="font-medium text-gray-700">View Medicine History</span>
+          </button>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-sm text-gray-600 mb-1">Today's Doses</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {stats.takenDoses} / {stats.totalDoses}
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-green-600 h-2 rounded-full transition-all"
+                  style={{
+                    width: `${stats.totalDoses > 0 ? (stats.takenDoses / stats.totalDoses) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-sm text-gray-600 mb-1">Medications</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {medicines.length}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                {medicines.length === 0
+                  ? "Add your first medicine"
+                  : "Active prescriptions"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Medicine List */}
+        <div className="space-y-4">
+          {medicines.length === 0 ? (
+            <div className="bg-white rounded-xl p-12 text-center shadow-sm">
+              <PillBottle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-600 mb-2">
+                No medicines added yet
+              </h3>
+              <p className="text-sm text-gray-500">
+                Click the + button to add your first medicine
+              </p>
+            </div>
+          ) : (
+            medicines.map((medicine) => (
+              <MedicineCard
+                key={medicine.id}
+                medicine={medicine}
+                onMarkTaken={handleMarkTaken}
+                onMarkMissed={handleMarkMissed}
+                onDelete={handleDelete}
+              />
+            ))
+          )}
+        </div>
+
+        <AddMedicineDialog onAdd={handleAddMedicine} />
+      </div>
+
+      {/* Alarm Notification */}
+      {activeAlarm && (
+        <AlarmNotification
+          medicineName={activeAlarm.medicineName}
+          dosage={activeAlarm.dosage}
+          time={activeAlarm.time}
+          onTake={() => {
+            handleMarkTaken(activeAlarm.medicineId, activeAlarm.time);
+            setActiveAlarm(null);
+          }}
+          onSnooze={() => {
+            const alarmKey = `${activeAlarm.medicineId}-${activeAlarm.time}`;
+            setSnoozedAlarms((prev) => new Set([...prev, alarmKey]));
+            setActiveAlarm(null);
+            setTimeout(() => {
+              setSnoozedAlarms((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(alarmKey);
+                return newSet;
+              });
+            }, 300000);
+          }}
+          onDismiss={() => setActiveAlarm(null)}
+        />
+      )}
+
+      {/* Medicine History */}
+      {showHistory && (
+        <MedicineHistory
+          history={medicineHistory}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {/* Profile */}
+      {showProfile && currentUser && (
+        <Profile
+          user={currentUser}
+          onUpdateProfile={handleUpdateProfile}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
+    </div>
+  );
+}
